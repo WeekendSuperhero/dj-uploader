@@ -336,19 +336,20 @@ impl MixcloudClient {
 
         // Add cover image if provided
         if let Some(img_path) = image_path
-            && img_path.exists() {
-                let img_bytes = fs::read(img_path).context("Failed to read image file")?;
+            && img_path.exists()
+        {
+            let img_bytes = fs::read(img_path).context("Failed to read image file")?;
 
-                let img_name = img_path
-                    .file_name()
-                    .and_then(|n| n.to_str())
-                    .unwrap_or("cover.jpg")
-                    .to_string();
+            let img_name = img_path
+                .file_name()
+                .and_then(|n| n.to_str())
+                .unwrap_or("cover.jpg")
+                .to_string();
 
-                let img_part = multipart::Part::bytes(img_bytes).file_name(img_name);
+            let img_part = multipart::Part::bytes(img_bytes).file_name(img_name);
 
-                form = form.part("picture", img_part);
-            }
+            form = form.part("picture", img_part);
+        }
 
         // Add tags if provided (Mixcloud expects tags-0-tag, tags-1-tag, etc.)
         if let Some(tag_list) = tags {
