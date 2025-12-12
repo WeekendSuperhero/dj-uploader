@@ -1,0 +1,8 @@
+/target
+tokens.json
+config.json
+*.mp3
+*.wav
+*.flac
+*.app
+*.dmg

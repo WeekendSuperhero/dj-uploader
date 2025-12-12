@@ -1,0 +1,10 @@
+{
+  "mixcloud": {
+    "client_id": "YOUR_MIXCLOUD_CLIENT_ID",
+    "client_secret": "YOUR_MIXCLOUD_CLIENT_SECRET"
+  },
+  "soundcloud": {
+    "client_id": "YOUR_SOUNDCLOUD_CLIENT_ID",
+    "client_secret": "YOUR_SOUNDCLOUD_CLIENT_SECRET"
+  }
+}

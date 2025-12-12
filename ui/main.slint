@@ -1,0 +1,278 @@
+import { Button, VerticalBox, HorizontalBox, LineEdit, CheckBox, ScrollView, GroupBox } from "std-widgets.slint";
+
+export component MainWindow inherits Window {
+    title: "DJ Uploader";
+    min-width: 500px;
+    min-height: 600px;
+    preferred-width: 600px;
+    preferred-height: 800px;
+
+    in-out property <string> file-path: "";
+    in-out property <string> title-text: "";
+    in-out property <string> description-text: "";
+    in-out property <string> image-path: "";
+    in-out property <string> tags-text: "";
+    in-out property <bool> mixcloud-enabled: true;
+    in-out property <bool> soundcloud-enabled: false;
+    in-out property <string> status-message: "Ready to upload";
+    in-out property <bool> is-uploading: false;
+    in-out property <bool> is-success: false;
+    in-out property <bool> is-error: false;
+    in-out property <bool> schedule-enabled: false;
+    in-out property <string> schedule-date: "";
+    in-out property <string> schedule-time: "";
+    in-out property <bool> generate-previews: false;
+
+    callback select-file();
+    callback select-image();
+    callback upload-clicked();
+
+    ScrollView {
+        VerticalBox {
+            padding: 20px;
+            spacing: 15px;
+
+            // Header
+            Text {
+                text: "DJ Mix Uploader";
+                font-size: 24px;
+                font-weight: 700;
+                horizontal-alignment: center;
+            }
+
+        // File Selection
+        GroupBox {
+            title: "Audio File";
+
+            VerticalBox {
+                spacing: 10px;
+
+                // Drop zone / File display
+                Rectangle {
+                    height: 100px;
+                    border-radius: 8px;
+                    border-width: 2px;
+                    border-color: file-path == "" ? #cccccc : #4CAF50;
+                    background: file-path == "" ? #f5f5f5 : #e8f5e9;
+
+                    VerticalBox {
+                        alignment: center;
+
+                        if file-path == "" : Text {
+                            text: "🎶 Drop file here or click to select";
+                            font-size: 14px;
+                            color: #666666;
+                            horizontal-alignment: center;
+                        }
+
+                        if file-path != "" : Text {
+                            text: "✓ " + file-path;
+                            font-size: 12px;
+                            color: #2e7d32;
+                            horizontal-alignment: center;
+                        }
+                    }
+
+                    TouchArea {
+                        clicked => { select-file(); }
+                    }
+                }
+
+                Button {
+                    text: "Select Audio File...";
+                    clicked => { select-file(); }
+                }
+            }
+        }
+
+        // Track Metadata
+        GroupBox {
+            title: "Track Information";
+
+            VerticalBox {
+                spacing: 10px;
+
+                HorizontalBox {
+                    Text { text: "Title:"; vertical-alignment: center; }
+                    LineEdit {
+                        text <=> title-text;
+                        placeholder-text: "Enter track title";
+                    }
+                }
+
+                HorizontalBox {
+                    Text { text: "Description:"; vertical-alignment: center; }
+                    LineEdit {
+                        text <=> description-text;
+                        placeholder-text: "Optional description";
+                    }
+                }
+
+                HorizontalBox {
+                    Text { text: "Tags:"; vertical-alignment: center; }
+                    LineEdit {
+                        text <=> tags-text;
+                        placeholder-text: "house, techno, electronic";
+                    }
+                }
+            }
+        }
+
+        // Artwork Selection
+        GroupBox {
+            title: "Artwork (Optional)";
+
+            VerticalBox {
+                spacing: 10px;
+
+                if image-path != "" : Text {
+                    text: "✓ " + image-path;
+                    font-size: 12px;
+                    color: #2e7d32;
+                }
+
+                Button {
+                    text: image-path == "" ? "Select Artwork..." : "Change Artwork...";
+                    clicked => { select-image(); }
+                }
+            }
+        }
+
+        // Platform Selection
+        GroupBox {
+            title: "Upload Platforms";
+
+            VerticalBox {
+                spacing: 10px;
+
+                HorizontalBox {
+                    spacing: 20px;
+
+                    CheckBox {
+                        text: "Mixcloud";
+                        checked <=> mixcloud-enabled;
+                    }
+
+                    CheckBox {
+                        text: "SoundCloud";
+                        checked <=> soundcloud-enabled;
+                    }
+                }
+
+                if !mixcloud-enabled && !soundcloud-enabled : Text {
+                    text: "⚠️ Select at least one platform";
+                    color: #ff9800;
+                    font-size: 12px;
+                }
+            }
+        }
+
+        // Schedule Publishing (Pro accounts only)
+        GroupBox {
+            title: "Schedule Publishing (Mixcloud Pro only)";
+
+            VerticalBox {
+                spacing: 10px;
+
+                CheckBox {
+                    text: "Schedule publish date";
+                    checked <=> schedule-enabled;
+                }
+
+                if schedule-enabled : VerticalBox {
+                    spacing: 10px;
+
+                    HorizontalBox {
+                        Text {
+                            text: "Date:";
+                            vertical-alignment: center;
+                            min-width: 80px;
+                        }
+                        LineEdit {
+                            text <=> schedule-date;
+                            placeholder-text: "YYYY-MM-DD";
+                        }
+                    }
+
+                    HorizontalBox {
+                        Text {
+                            text: "Time:";
+                            vertical-alignment: center;
+                            min-width: 80px;
+                        }
+                        LineEdit {
+                            text <=> schedule-time;
+                            placeholder-text: "HH:MM (your local time)";
+                        }
+                    }
+
+                    Text {
+                        text: "ℹ️ Time will be converted to UTC for upload";
+                        font-size: 11px;
+                        color: #666666;
+                    }
+                }
+            }
+        }
+
+        // Preview Snippets
+        GroupBox {
+            title: "Preview Snippets";
+
+            VerticalBox {
+                spacing: 10px;
+
+                CheckBox {
+                    text: "Generate preview snippets (30s, 60s, 90s)";
+                    checked <=> generate-previews;
+                }
+
+                if generate-previews : Text {
+                    text: "ℹ️ Snippets will be saved in the same folder as the mix";
+                    font-size: 11px;
+                    color: #666666;
+                }
+            }
+        }
+
+        // Upload Button
+        Button {
+            text: is-uploading ? "Uploading..." : "Upload";
+            enabled: file-path != "" && title-text != "" && (mixcloud-enabled || soundcloud-enabled) && !is-uploading;
+            primary: true;
+
+            clicked => { upload-clicked(); }
+        }
+
+            // Status Message
+            Rectangle {
+                height: 60px;
+                border-radius: 4px;
+                background: is-success ? #e8f5e9 :
+                           is-error ? #ffebee : #f5f5f5;
+
+                Text {
+                    text: status-message;
+                    horizontal-alignment: center;
+                    vertical-alignment: center;
+                    color: is-success ? #2e7d32 :
+                          is-error ? #c62828 : #666666;
+                    wrap: word-wrap;
+                }
+            }
+
+            // Footer
+            Rectangle {
+                height: 40px;
+
+                Text {
+                    text: "Made with ❤️ in San Francisco";
+                    font-size: 12px;
+                    color: #999999;
+                    horizontal-alignment: center;
+                    vertical-alignment: center;
+                }
+            }
+        }
+    }
+}
