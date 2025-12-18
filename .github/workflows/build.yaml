@@ -59,7 +59,6 @@ jobs:
 
       - name: Run clippy
         run: |
-          cat config.json.example > config.json
           cargo clippy --all-targets --all-features -- -D warnings
 
       - name: Build
