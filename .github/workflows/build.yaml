@@ -58,7 +58,9 @@ jobs:
         run: cargo fmt --all -- --check
 
       - name: Run clippy
-        run: cargo clippy --all-targets --all-features -- -D warnings
+        run: |
+          cat config.json.example > config.json
+          cargo clippy --all-targets --all-features -- -D warnings
 
       - name: Build
         run: cargo build --release --verbose
