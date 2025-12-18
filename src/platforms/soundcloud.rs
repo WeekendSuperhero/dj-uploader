@@ -378,19 +378,20 @@ impl SoundcloudClient {
 
         // Add artwork if provided
         if let Some(img_path) = image_path
-            && img_path.exists() {
-                let img_bytes = fs::read(img_path).context("Failed to read image file")?;
+            && img_path.exists()
+        {
+            let img_bytes = fs::read(img_path).context("Failed to read image file")?;
 
-                let img_name = img_path
-                    .file_name()
-                    .and_then(|n| n.to_str())
-                    .unwrap_or("artwork.jpg")
-                    .to_string();
+            let img_name = img_path
+                .file_name()
+                .and_then(|n| n.to_str())
+                .unwrap_or("artwork.jpg")
+                .to_string();
 
-                let img_part = multipart::Part::bytes(img_bytes).file_name(img_name);
+            let img_part = multipart::Part::bytes(img_bytes).file_name(img_name);
 
-                form = form.part("track[artwork_data]", img_part);
-            }
+            form = form.part("track[artwork_data]", img_part);
+        }
 
         // Add tags if provided
         if let Some(tag_list) = tags {
