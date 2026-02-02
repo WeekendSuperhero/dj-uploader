@@ -35,8 +35,6 @@ DMG_NAME="DJ-Uploader-${VERSION}.dmg"
 SIGNING_IDENTITY="${CODESIGN_IDENTITY:-}"
 ENABLE_SIGNING="${ENABLE_CODESIGN:-false}"
 ENABLE_NOTARIZATION="${ENABLE_NOTARIZE:-false}"
-APPLE_ID="${APPLE_ID:-}"
-TEAM_ID="${APPLE_TEAM_ID:-}"
 NOTARY_PROFILE="${NOTARY_PROFILE:-notarytool-profile}"
 
 # Colors for output
@@ -317,23 +315,13 @@ fi
 if [ "$ENABLE_NOTARIZATION" = "true" ] && [ "$ENABLE_SIGNING" = "true" ]; then
     log_info "Step 5/5: Notarizing DMG with Apple..."
 
-    # Check if required variables are set
-    if [ -z "$APPLE_ID" ] || [ -z "$TEAM_ID" ]; then
-        log_error "Notarization enabled but APPLE_ID or APPLE_TEAM_ID not set"
-        log_info "Set them with:"
-        log_info "  export APPLE_ID='your@apple.id'"
-        log_info "  export APPLE_TEAM_ID='YOUR_TEAM_ID'"
-        exit 1
-    fi
 
     log_info "Submitting to Apple notary service..."
     log_info "This may take several minutes..."
 
     # Submit for notarization
     xcrun notarytool submit "target/${DMG_NAME}" \
-        --apple-id "$APPLE_ID" \
-        --team-id "$TEAM_ID" \
-        --password "@keychain:$NOTARY_PROFILE" \
+        --keychain-profile "notarytool-profile" \
         --wait
 
     # Staple the notarization ticket to the DMG
@@ -349,12 +337,10 @@ else
         log_info "  1. Store credentials: xcrun notarytool store-credentials $NOTARY_PROFILE"
         log_info "  2. Set environment variables:"
         log_info "     export ENABLE_NOTARIZE=true"
-        log_info "     export APPLE_ID='your@apple.id'"
-        log_info "     export APPLE_TEAM_ID='YOUR_TEAM_ID'"
     fi
     echo ""
 fi
-
+--keychain-profile "notarytool-profile"
 # ============================================================================
 # Summary
 # ============================================================================
