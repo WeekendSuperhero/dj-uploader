@@ -40,8 +40,8 @@ pub struct UploadResponse {
 
 /// Generate PKCE code verifier (random string)
 fn generate_code_verifier() -> String {
-    let mut rng = rand::thread_rng();
-    let random_bytes: Vec<u8> = (0..32).map(|_| rng.r#gen()).collect();
+    let mut rng = rand::rng();
+    let random_bytes: Vec<u8> = (0..32).map(|_| rng.random()).collect();
     URL_SAFE_NO_PAD.encode(&random_bytes)
 }
 
@@ -86,8 +86,8 @@ impl SoundcloudClient {
         let code_challenge = generate_code_challenge(&code_verifier);
 
         // Generate random state for CSRF protection
-        let state: String = rand::thread_rng()
-            .sample_iter(&rand::distributions::Alphanumeric)
+        let state: String = rand::rng()
+            .sample_iter(&rand::distr::Alphanumeric)
             .take(32)
             .map(char::from)
             .collect();

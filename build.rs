@@ -53,9 +53,9 @@ fn main() {
         .expect("Missing 'client_secret' in mixcloud config");
 
     // Generate a random 256-bit AES key and 96-bit nonce for this build
-    let mut rng = rand::thread_rng();
-    let key: [u8; 32] = rng.r#gen();
-    let nonce: [u8; 12] = rng.r#gen();
+    let mut rng = rand::rng();
+    let key: [u8; 32] = rng.r#random();
+    let nonce: [u8; 12] = rng.r#random();
 
     // Encrypt the credentials with AES-256-GCM
     let encrypted_mc_id = encrypt_string(client_id, &key, &nonce);

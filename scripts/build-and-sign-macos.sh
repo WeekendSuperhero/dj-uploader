@@ -10,6 +10,24 @@
 
 set -e
 
+# Parse command line arguments
+DRY_RUN=false
+for arg in "$@"; do
+    case $arg in
+        --dry-run)
+            DRY_RUN=true
+            shift
+            ;;
+        *)
+            # Unknown option
+            ;;
+    esac
+done
+
+if [ "$DRY_RUN" = true ]; then
+    echo "Running in dry-run mode. No actual building or signing will occur."
+fi
+
 # Configuration
 APP_NAME="DJ Uploader"
 BUNDLE_ID="com.djuploader.app"
@@ -35,8 +53,6 @@ DMG_NAME="DJ-Uploader-${VERSION}.dmg"
 SIGNING_IDENTITY="${CODESIGN_IDENTITY:-}"
 ENABLE_SIGNING="${ENABLE_CODESIGN:-false}"
 ENABLE_NOTARIZATION="${ENABLE_NOTARIZE:-false}"
-APPLE_ID="${APPLE_ID:-}"
-TEAM_ID="${APPLE_TEAM_ID:-}"
 NOTARY_PROFILE="${NOTARY_PROFILE:-notarytool-profile}"
 
 # Colors for output
@@ -63,6 +79,34 @@ log_error() {
     echo -e "${RED}✗ ${1}${NC}"
 }
 
+progress_bar() {
+    local duration=${1}
+    local interval=0.1
+    local count=$(echo "$duration / $interval" | bc -l)
+
+    for ((i=0; i<count; i++)); do
+        printf "⏳"
+        sleep $interval
+    done
+    printf "\n"
+}
+
+# Function to check if required tools exist
+check_prerequisites() {
+    local missing_tools=()
+
+    command -v cargo >/dev/null 2>&1 || missing_tools+=("cargo")
+    command -v iconutil >/dev/null 2>&1 || missing_tools+=("iconutil")
+    command -v hdiutil >/dev/null 2>&1 || missing_tools+=("hdiutil")
+    command -v codesign >/dev/null 2>&1 || missing_tools+=("codesign")
+    command -v security >/dev/null 2>&1 || missing_tools+=("security")
+
+    if [ ${#missing_tools[@]} -ne 0 ]; then
+        log_error "Missing required tools: ${missing_tools[*]}"
+        exit 1
+    fi
+}
+
 # Function to check if signing identity exists
 check_signing_identity() {
     if [ -z "$SIGNING_IDENTITY" ]; then
@@ -84,6 +128,57 @@ list_signing_identities() {
     log_info "Tip: Run ./scripts/list-certificates.sh for more detailed information"
 }
 
+# Function to select signing identity interactively
+select_signing_identity() {
+    log_info "Looking for available signing identities..."
+    local identities=($(security find-identity -v -p codesigning | grep "Developer ID Application" | cut -d'"' -f2))
+
+    if [ ${#identities[@]} -eq 0 ]; then
+        log_error "No Developer ID Application identities found."
+        list_signing_identities
+        return 1
+    elif [ ${#identities[@]} -eq 1 ]; then
+        SIGNING_IDENTITY="${identities[0]}"
+        log_success "Found one identity: $SIGNING_IDENTITY"
+    else
+        log_info "Multiple signing identities found:"
+        for i in "${!identities[@]}"; do
+            echo "  [$((i+1))] ${identities[i]}"
+        done
+
+        echo ""
+        while true; do
+            read -p "Select identity [1-${#identities[@]}]: " choice
+            if [[ $choice =~ ^[1-${#identities[@]}]$ ]]; then
+                SIGNING_IDENTITY="${identities[$((choice-1))]}"
+                log_success "Selected identity: $SIGNING_IDENTITY"
+                break
+            else
+                log_error "Invalid selection. Please enter a number between 1 and ${#identities[@]}."
+            fi
+        done
+    fi
+
+    export CODESIGN_IDENTITY="$SIGNING_IDENTITY"
+}
+
+# Validate project structure
+validate_project() {
+    if [ ! -f "$PROJECT_ROOT/Cargo.toml" ]; then
+        log_error "Cargo.toml not found in project root: $PROJECT_ROOT"
+        exit 1
+    fi
+
+    if [ ! -f "$PROJECT_ROOT/src/main.rs" ]; then
+        log_error "Main Rust source file not found: $PROJECT_ROOT/src/main.rs"
+        exit 1
+    fi
+
+    if [ ! -d "$PROJECT_ROOT/assets" ]; then
+        log_warning "Assets directory not found: $PROJECT_ROOT/assets"
+    fi
+}
+
 # Print banner
 echo ""
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
@@ -92,9 +187,24 @@ log_info "Version: ${VERSION}"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo ""
 
+# Validate prerequisites
+log_info "Validating prerequisites..."
+check_prerequisites
+validate_project
+log_success "Prerequisites validated"
+echo ""
+
 # Check code signing setup
 if [ "$ENABLE_SIGNING" = "true" ]; then
     log_info "Code signing: ENABLED"
+    if [ -z "$SIGNING_IDENTITY" ]; then
+        log_info "No signing identity specified, attempting to select one..."
+        select_signing_identity || {
+            log_error "Could not select a signing identity"
+            exit 1
+        }
+    fi
+
     if check_signing_identity; then
         log_success "Signing identity found: $SIGNING_IDENTITY"
     else
@@ -317,23 +427,12 @@ fi
 if [ "$ENABLE_NOTARIZATION" = "true" ] && [ "$ENABLE_SIGNING" = "true" ]; then
     log_info "Step 5/5: Notarizing DMG with Apple..."
 
-    # Check if required variables are set
-    if [ -z "$APPLE_ID" ] || [ -z "$TEAM_ID" ]; then
-        log_error "Notarization enabled but APPLE_ID or APPLE_TEAM_ID not set"
-        log_info "Set them with:"
-        log_info "  export APPLE_ID='your@apple.id'"
-        log_info "  export APPLE_TEAM_ID='YOUR_TEAM_ID'"
-        exit 1
-    fi
-
     log_info "Submitting to Apple notary service..."
     log_info "This may take several minutes..."
 
     # Submit for notarization
     xcrun notarytool submit "target/${DMG_NAME}" \
-        --apple-id "$APPLE_ID" \
-        --team-id "$TEAM_ID" \
-        --password "@keychain:$NOTARY_PROFILE" \
+        --keychain-profile "$NOTARY_PROFILE" \
         --wait
 
     # Staple the notarization ticket to the DMG
@@ -349,8 +448,6 @@ else
         log_info "  1. Store credentials: xcrun notarytool store-credentials $NOTARY_PROFILE"
         log_info "  2. Set environment variables:"
         log_info "     export ENABLE_NOTARIZE=true"
-        log_info "     export APPLE_ID='your@apple.id'"
-        log_info "     export APPLE_TEAM_ID='YOUR_TEAM_ID'"
     fi
     echo ""
 fi
