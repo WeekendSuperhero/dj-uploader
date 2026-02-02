@@ -11,6 +11,9 @@ makeicns() {
   sips -z 32 32   "$png" --out "$base.iconset/icon_32x32.png"
   sips -z 64 64   "$png" --out "$base.iconset/icon_32x32@2x.png"
 
+  sips -z 64 64   "$png" --out "$base.iconset/icon_64x64.png"
+  sips -z 128 128   "$png" --out "$base.iconset/icon_64x64@2x.png"
+
   sips -z 128 128 "$png" --out "$base.iconset/icon_128x128.png"
   sips -z 256 256 "$png" --out "$base.iconset/icon_128x128@2x.png"
 
