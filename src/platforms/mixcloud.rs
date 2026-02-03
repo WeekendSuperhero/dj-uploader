@@ -189,6 +189,9 @@ impl MixcloudClient {
         storage.set_mixcloud_tokens(token_info);
         storage.save()?;
 
+        // Bring the app back to the foreground
+        super::activate_app();
+
         println!("\n✓ Authorization successful!");
         println!("Token saved to: {}", TokenStorage::token_path()?.display());
 

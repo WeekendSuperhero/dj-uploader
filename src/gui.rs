@@ -8,6 +8,19 @@ slint::include_modules!();
 pub fn run_gui() -> Result<()> {
     let ui = MainWindow::new()?;
 
+    // Check existing SoundCloud auth status on startup
+    {
+        let storage = crate::config::TokenStorage::load().unwrap_or(crate::config::TokenStorage {
+            mixcloud: None,
+            soundcloud: None,
+        });
+        if let Some(ref token_info) = storage.soundcloud
+            && !token_info.is_expired()
+        {
+            ui.set_soundcloud_connected(true);
+        }
+    }
+
     // Handle file selection
     let ui_weak = ui.as_weak();
     ui.on_select_file(move || {
@@ -111,6 +124,78 @@ pub fn run_gui() -> Result<()> {
             })
             .ok();
         });
+    });
+
+    // Handle SoundCloud connect
+    let ui_weak = ui.as_weak();
+    ui.on_connect_soundcloud(move || {
+        let ui = ui_weak.unwrap();
+        ui.set_soundcloud_connecting(true);
+        ui.set_status_message(SharedString::from(
+            "Opening browser for SoundCloud authorization...",
+        ));
+        ui.set_is_success(false);
+        ui.set_is_error(false);
+
+        let ui_handle = ui.as_weak();
+        thread::spawn(move || {
+            let result = crate::platforms::soundcloud::SoundcloudClient::authorize();
+
+            slint::invoke_from_event_loop(move || {
+                if let Some(ui) = ui_handle.upgrade() {
+                    ui.set_soundcloud_connecting(false);
+                    match result {
+                        Ok(()) => {
+                            ui.set_soundcloud_connected(true);
+                            ui.set_soundcloud_enabled(true);
+                            ui.set_status_message(SharedString::from(
+                                "SoundCloud connected successfully!",
+                            ));
+                            ui.set_is_success(true);
+                            ui.set_is_error(false);
+                        }
+                        Err(e) => {
+                            ui.set_status_message(SharedString::from(format!(
+                                "SoundCloud connection failed: {}",
+                                e
+                            )));
+                            ui.set_is_success(false);
+                            ui.set_is_error(true);
+                        }
+                    }
+                }
+            })
+            .ok();
+        });
+    });
+
+    // Check for updates in background
+    {
+        let ui_handle = ui.as_weak();
+        thread::spawn(move || {
+            if let Ok(Some(update_info)) = crate::updater::check_for_update() {
+                let version = update_info.version;
+                let url = update_info.release_url;
+                slint::invoke_from_event_loop(move || {
+                    if let Some(ui) = ui_handle.upgrade() {
+                        ui.set_update_available(true);
+                        ui.set_update_version(SharedString::from(version));
+                        ui.set_update_url(SharedString::from(url));
+                    }
+                })
+                .ok();
+            }
+        });
+    }
+
+    // Handle update button click
+    let ui_weak = ui.as_weak();
+    ui.on_open_update_url(move || {
+        let ui = ui_weak.unwrap();
+        let url = ui.get_update_url().to_string();
+        if !url.is_empty() {
+            crate::updater::open_release_page(&url);
+        }
     });
 
     ui.run()?;

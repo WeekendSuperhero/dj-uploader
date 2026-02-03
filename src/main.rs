@@ -3,6 +3,7 @@ mod cli;
 mod config;
 mod gui;
 mod platforms;
+mod updater;
 
 use anyhow::Result;
 use clap::Parser;
@@ -19,6 +20,16 @@ fn main() -> Result<()> {
     env_logger::builder()
         .filter_level(log::LevelFilter::Info)
         .init();
+
+    // Check for updates
+    if let Ok(Some(update_info)) = updater::check_for_update() {
+        eprintln!(
+            "\n  Update available: v{} (current: v{})",
+            update_info.version,
+            env!("CARGO_PKG_VERSION")
+        );
+        eprintln!("  Download: {}\n", update_info.release_url);
+    }
 
     match args.command {
         Some(cli::Commands::Auth { platform }) => {

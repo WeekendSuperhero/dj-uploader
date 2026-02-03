@@ -22,10 +22,17 @@ export component MainWindow inherits Window {
     in-out property <string> schedule-date: "";
     in-out property <string> schedule-time: "";
     in-out property <bool> generate-previews: false;
+    in-out property <bool> soundcloud-connected: false;
+    in-out property <bool> soundcloud-connecting: false;
+    in-out property <bool> update-available: false;
+    in-out property <string> update-version: "";
+    in-out property <string> update-url: "";
 
     callback select-file();
     callback select-image();
     callback upload-clicked();
+    callback connect-soundcloud();
+    callback open-update-url();
 
     ScrollView {
         VerticalBox {
@@ -38,6 +45,50 @@ export component MainWindow inherits Window {
                 font-size: 24px;
                 font-weight: 700;
                 horizontal-alignment: center;
+            }
+
+            // Update notification
+            if update-available : Rectangle {
+                height: 40px;
+                border-radius: 6px;
+                background: #e3f2fd;
+                border-width: 1px;
+                border-color: #2196F3;
+
+                HorizontalBox {
+                    padding-left: 12px;
+                    padding-right: 12px;
+
+                    Text {
+                        text: "Update available: v" + update-version;
+                        color: #1565C0;
+                        font-size: 13px;
+                        vertical-alignment: center;
+                    }
+
+                    Rectangle {}
+
+                    Rectangle {
+                        width: 80px;
+                        height: 28px;
+                        border-radius: 4px;
+                        background: #2196F3;
+
+                        Text {
+                            text: "Update";
+                            color: white;
+                            font-size: 12px;
+                            font-weight: 600;
+                            horizontal-alignment: center;
+                            vertical-alignment: center;
+                        }
+
+                        TouchArea {
+                            clicked => { open-update-url(); }
+                            mouse-cursor: pointer;
+                        }
+                    }
+                }
             }
 
         // File Selection
@@ -145,17 +196,57 @@ export component MainWindow inherits Window {
             VerticalBox {
                 spacing: 10px;
 
+                // Mixcloud row
                 HorizontalBox {
-                    spacing: 20px;
-
+                    spacing: 10px;
                     CheckBox {
                         text: "Mixcloud";
                         checked <=> mixcloud-enabled;
                     }
+                }
+
+                // SoundCloud row with connect button / status
+                HorizontalBox {
+                    spacing: 10px;
+                    alignment: start;
 
                     CheckBox {
                         text: "SoundCloud";
                         checked <=> soundcloud-enabled;
+                    }
+
+                    if soundcloud-connected : HorizontalBox {
+                        spacing: 5px;
+                        Rectangle {
+                            width: 10px;
+                            height: 10px;
+                            border-radius: 5px;
+                            background: #4CAF50;
+                        }
+                        Text {
+                            text: "Connected";
+                            color: #4CAF50;
+                            font-size: 12px;
+                            vertical-alignment: center;
+                        }
+                    }
+
+                    if !soundcloud-connected : Rectangle {
+                        width: 105px;
+                        height: 25px;
+                        opacity: soundcloud-connecting ? 0.5 : 1.0;
+
+                        Image {
+                            width: 105px;
+                            height: 25px;
+                            source: @image-url("../assets/sign-in-with-sound-cloud-medium.png");
+                        }
+
+                        TouchArea {
+                            enabled: !soundcloud-connecting;
+                            clicked => { connect-soundcloud(); }
+                            mouse-cursor: pointer;
+                        }
                     }
                 }
 

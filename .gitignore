@@ -6,3 +6,4 @@ config.json
 *.flac
 *.app
 *.dmg
+*.DS_Store
