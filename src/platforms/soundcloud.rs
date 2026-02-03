@@ -101,8 +101,7 @@ impl SoundcloudClient {
             .append_pair("response_type", "code")
             .append_pair("code_challenge", &code_challenge)
             .append_pair("code_challenge_method", "S256")
-            .append_pair("state", &state)
-            .append_pair("scope", "non-expiring"); // Request non-expiring token
+            .append_pair("state", &state);
 
         println!("\nOpening browser for authorization...");
         println!("If the browser doesn't open, visit this URL:\n");
@@ -224,6 +223,9 @@ impl SoundcloudClient {
         });
         storage.soundcloud = Some(token_info);
         storage.save()?;
+
+        // Bring the app back to the foreground
+        super::activate_app();
 
         println!("\n✓ Authorization successful!");
         println!("Token saved to: {}", TokenStorage::token_path()?.display());

@@ -2,10 +2,44 @@ pub mod mixcloud;
 pub mod soundcloud;
 
 use anyhow::Result;
+use log::debug;
 use std::path::Path;
 
 use crate::cli::Platform;
 use crate::config::TokenStorage;
+
+/// Bring the app back to the foreground after an OAuth callback.
+/// On macOS, this activates the app using AppleScript.
+/// On other platforms, this is a no-op.
+pub fn activate_app() {
+    #[cfg(target_os = "macos")]
+    {
+        let pid = std::process::id();
+        let script = format!(
+            r#"tell application "System Events"
+    set targetProcess to first application process whose unix id is {}
+    set frontmost of targetProcess to true
+end tell"#,
+            pid
+        );
+        let result = std::process::Command::new("osascript")
+            .arg("-e")
+            .arg(&script)
+            .output();
+
+        match result {
+            Ok(output) if output.status.success() => {
+                debug!("Activated app via AppleScript");
+            }
+            _ => {
+                // Fallback: try to activate by bundle ID for .app builds
+                let _ = std::process::Command::new("open")
+                    .args(["-b", "com.djuploader.app"])
+                    .output();
+            }
+        }
+    }
+}
 
 pub fn handle_auth(platform: Platform) -> Result<()> {
     match platform {
