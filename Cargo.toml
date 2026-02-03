@@ -1,6 +1,6 @@
 [package]
 name = "dj-uploader"
-version = "2026.6.0"
+version = "2026.6.1"
 edition = "2024"
 
 [[bin]]
